@@ -1,0 +1,37 @@
+[package]
+authors = ["Parity Technologies <admin@parity.io>"]
+description = "A library to read JSON keyfiles and sign Ethereum stuff."
+documentation = "https://docs.rs/crate/ethsign"
+edition = "2018"
+homepage = "https://github.com/tomusdrw/ethsign"
+license = "GPL-3.0"
+name = "ethsign"
+repository = "https://github.com/tomusdrw/ethsign"
+version = "0.7.3"
+
+[dependencies]
+zeroize = "1.0.0"
+rand = "0.7.0"
+rustc-hex = "2.0.1"
+serde_json = "1.0.48"
+hex = "0.4.2"
+secp256k1 = { version = "0.17.2", optional = true, features = ["recovery"] }
+parity-crypto = { version = "0.5", optional = true }
+serde = { version = "1.0", features = ["derive"]}
+
+# Libraries for for pure-rust crypto
+libsecp256k1 = { package="libsecp256k1", version = "0.3.1", optional = true }
+ethsign-crypto = { version = "0.2.1", path = "./ethsign-crypto", optional = true }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+
+[features]
+default = ["secp256k1", "parity-crypto"]
+pure-rust = ["libsecp256k1", "ethsign-crypto"]
+
+[workspace]
+members = [
+    "ethsign-crypto"
+]
