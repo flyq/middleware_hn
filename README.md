@@ -37,10 +37,10 @@
 
 ### 2. 拉取代码
 ```shell
-git clone https://github.com/snzhub/middleware_hn.git
+git clone git@github.com:flyq/middleware_hn.git
 ```
 ### 3. 修改配置文件 .env
-注意新建 .env 文件并且设置：
+注意修改 .env 文件并且设置，因为这里删掉了邮箱部分，所以 SPARKPOST_API_KEY，SENDING_EMAIL_ADDRESS 可以随便填。注意要参考那个环境设置好数据库相关：
 ```.env
 DATABASE_URL=postgres://<database user>:<database user's password>@localhost/<database name>
 SPARKPOST_API_KEY='<mail's KEY>'
@@ -94,7 +94,7 @@ payload = "evidence=0xffffffffffffffffffffffffffffffffffffffff&timestamp=1587723
 signature = hmacsha256hash(secretKey, payload)
 ```
 
-使用 https://github.com/snzhub/hmac_sig 这个工具
+使用 https://github.com/flyq/hmac_sig 这个工具
 比如使用 密码： flyqtestpw 对 evidence 为 0xffffffffffffffffffffffffffffffffffffffff ，timestamp 为 1587723742000 的数据签名：
 ```shell 
 cargo run flyqtestpw 0xffffffffffffffffffffffffffffffffffffffff 1587723742000 0
@@ -121,6 +121,8 @@ curl --request POST --url http://localhost:3000/v1/evidence/upload  --header 'co
 
 查询交易:
 
+进入 http://scan.taiditech.com/ 直接查看最近 10 笔交易，或者把 txid 放在搜索框里面搜索。
+
 ![tx](./images/tx.PNG)
 
 注意返回的 Json 数据中，txid 和浏览器里面的是相同的。并且上链的 payload 也是对的上的。
@@ -128,8 +130,8 @@ curl --request POST --url http://localhost:3000/v1/evidence/upload  --header 'co
 
 ### 5. 查询存证哈希
 查询交易时，也需要签名：
-使用 https://gitlab.ethgeek.cn/flyq/hmac_sig 这个工具
-比如使用 密码： flyqtestpw 对 txid 为 0x59fe4c0008c73e36ff508c478ae0796ff39c880694c4a3909cd52c028be2575d，timestamp 为 1587723742000 的数据签名：
+使用 https://github.com/flyq/hmac_sig 这个工具
+比如使用 密码(这个密码要和上面注册了的密码相同)： flyqtestpw 对 txid 为 0x59fe4c0008c73e36ff508c478ae0796ff39c880694c4a3909cd52c028be2575d，timestamp 为 1587723742000 的数据签名：
 ```shell
 cargo run flyqtestpw 0x59fe4c0008c73e36ff508c478ae0796ff39c880694c4a3909cd52c028be2575d 1587723742000 1
 ```
