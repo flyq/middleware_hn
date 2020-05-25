@@ -1,10 +1,10 @@
 use std::fmt;
 
+use crate::crypto::Keccak256;
 use crate::ec;
 use crate::error::Error;
 use crate::keyfile::Crypto;
 use crate::protected::Protected;
-use crate::crypto::Keccak256;
 use rustc_hex::ToHex;
 
 /// Message signature
@@ -251,9 +251,7 @@ mod tests {
         let key = SecretKey::from_raw(&secret).unwrap();
 
         let pass = "hunter2".into();
-        let crypto = key
-            .to_crypto(&pass, 4096)
-            .unwrap();
+        let crypto = key.to_crypto(&pass, 4096).unwrap();
         let key2 = SecretKey::from_crypto(&crypto, &pass).unwrap();
 
         assert_eq!(

@@ -1,9 +1,9 @@
 //! AES symmetric encryption
 
-use std::fmt;
-use aes_ctr::Aes128Ctr;
 use aes_ctr::stream_cipher::generic_array::GenericArray;
 use aes_ctr::stream_cipher::{NewStreamCipher, SyncStreamCipher};
+use aes_ctr::Aes128Ctr;
+use std::fmt;
 
 /// Error type for the AES symmetric encryption
 #[derive(Debug)]
@@ -18,7 +18,9 @@ impl fmt::Display for SymmError {
         match self {
             SymmError::InvalidKey => f.write_str("Key must be 16 bytes long"),
             SymmError::InvalidNonce => f.write_str("Nonce must be 16 bytes long"),
-            SymmError::SourceDestinationMismatch => f.write_str("Source and destination must have equal length"),
+            SymmError::SourceDestinationMismatch => {
+                f.write_str("Source and destination must have equal length")
+            }
         }
     }
 }
@@ -27,7 +29,12 @@ impl fmt::Display for SymmError {
 ///
 /// Key (`k`) length and initialisation vector (`iv`) length have to be 16 bytes each.
 /// An error is returned if the input lengths are invalid.
-pub fn encrypt_128_ctr(k: &[u8], iv: &[u8], plain: &[u8], dest: &mut [u8]) -> Result<(), SymmError> {
+pub fn encrypt_128_ctr(
+    k: &[u8],
+    iv: &[u8],
+    plain: &[u8],
+    dest: &mut [u8],
+) -> Result<(), SymmError> {
     if k.len() != 16 {
         return Err(SymmError::InvalidKey);
     }
@@ -53,7 +60,12 @@ pub fn encrypt_128_ctr(k: &[u8], iv: &[u8], plain: &[u8], dest: &mut [u8]) -> Re
 ///
 /// Key (`k`) length and initialisation vector (`iv`) length have to be 16 bytes each.
 /// An error is returned if the input lengths are invalid.
-pub fn decrypt_128_ctr(k: &[u8], iv: &[u8], encrypted: &[u8], dest: &mut [u8]) -> Result<(), SymmError> {
+pub fn decrypt_128_ctr(
+    k: &[u8],
+    iv: &[u8],
+    encrypted: &[u8],
+    dest: &mut [u8],
+) -> Result<(), SymmError> {
     // This is symmetrical encryption, so those are equivalent operations
     encrypt_128_ctr(k, iv, encrypted, dest)
 }

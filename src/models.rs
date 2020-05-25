@@ -13,9 +13,11 @@ pub struct Invitation {
 }
 
 // any type that implements Into<String> can be used to create Invitation
-impl<T> From<T> for Invitation where
-T: Into<String> {
-     fn from(email: T) -> Self {
+impl<T> From<T> for Invitation
+where
+    T: Into<String>,
+{
+    fn from(email: T) -> Self {
         Invitation {
             id: uuid::Uuid::new_v4(),
             email: email.into(),
@@ -52,4 +54,3 @@ impl From<User> for SlimUser {
         SlimUser { email: user.email }
     }
 }
-

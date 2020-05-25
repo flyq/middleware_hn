@@ -2,7 +2,7 @@
 
 use crate::crypto::{self, Keccak256};
 use crate::error::Error;
-use crate::{SecretKey, Protected};
+use crate::{Protected, SecretKey};
 
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -111,11 +111,7 @@ pub enum Prf {
 
 impl Crypto {
     /// Encrypt plain data with password
-    pub fn encrypt(
-        plain: &[u8],
-        password: &Protected,
-        iterations: u32,
-    ) -> Result<Self, Error> {
+    pub fn encrypt(plain: &[u8], password: &Protected, iterations: u32) -> Result<Self, Error> {
         let mut rng = thread_rng();
 
         let mut salt = [0u8; 32];

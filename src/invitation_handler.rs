@@ -2,8 +2,6 @@ use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
 
-
-
 use crate::errors::ServiceError;
 use crate::models::{Invitation, Pool};
 
@@ -28,7 +26,6 @@ pub fn post_invitation(
     })
 }
 
-
 fn create_invitation(
     eml: String,
     pool: web::Data<Pool>,
@@ -42,7 +39,7 @@ fn create_invitation(
 fn query(eml: String, pool: web::Data<Pool>) -> Result<Invitation, crate::errors::ServiceError> {
     use crate::schema::invitations::dsl::invitations;
 
-    let new_invitation : Invitation = eml.into();
+    let new_invitation: Invitation = eml.into();
     let conn: &PgConnection = &pool.get().unwrap();
 
     let inserted_invitation = diesel::insert_into(invitations)

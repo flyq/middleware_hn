@@ -52,7 +52,7 @@ fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/evidence/query")
                             .route(web::get().to_async(business_handler::query)),
-                    )
+                    ),
             )
     })
     .bind("127.0.0.1:3000")?

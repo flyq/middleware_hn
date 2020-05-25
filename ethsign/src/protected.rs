@@ -1,5 +1,5 @@
-use zeroize::Zeroize;
 use hex;
+use zeroize::Zeroize;
 
 /// A protected set of bytes.
 #[derive(Clone)]
