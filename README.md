@@ -159,7 +159,7 @@ $ curl --request GET --url http://localhost:3000/v1/evidence/query  --header 'co
 
 ## 性能瓶颈与改进
 
-- [ ] 需要等待上链结果，并得到交易Hash返回给API。需要3秒左右。改进：本地自己算交易hash，异步得到上链结果后，再确定。工作量：中等。
+- [x] 需要等待RPC结果，并得到交易Hash返回给API。改进：本地自己算交易hash，再确定。
 - [ ] 调用 cita-cli 程序，本身它就是一个瓶颈，而且 cita-cli 上链时需要每次从链上拿一些数据，比如当前块高之类的。后续准备参考 cita-cli 里面的模块以及 Rust SDK 直接把上链代码内置进来。工作量：高。
 - [ ] hmac 签名过程 [hmac_sig](https://gitlab.ethgeek.cn/flyq/hmac_sig) 有明显的停顿感。改进：目前用的hmac库可以为了安全性实现得比较复杂，但是自己直接把key，msg拼接hash感觉不是很安全。工作量：中等。
-- [ ] KMS 的位置改进。每次Post都需要解密一次Keystore，可以设置为系统启动时就解密好。工作量：低。
+- [x] KMS 的位置改进。每次Post都需要解密一次Keystore，可以设置为系统启动时就解密好。工作量：低。
