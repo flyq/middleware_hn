@@ -17,13 +17,11 @@ lazy_static::lazy_static! {
         let key: KeyFile = from_reader(file).unwrap();
         let password: Protected = pwd.into();
         let secret = key.to_secret_key(&password).unwrap();
-        String::from("0x") + &secret.unprotected()
+        secret.unprotected().to_string()
     };
 }
 
-// WARNING THIS IS ONLY FOR DEMO PLEASE DO MORE RESEARCH FOR PRODUCTION USE
 pub fn hash_password(password: &str) -> Result<String, ServiceError> {
-    println!("{:?}", password);
     Hasher::default()
         .with_password(password)
         .with_salt("test_salt")

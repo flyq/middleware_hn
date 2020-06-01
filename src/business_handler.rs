@@ -1,17 +1,25 @@
+extern crate cita_tool;
+extern crate cita_types;
 extern crate hex;
 extern crate hmac;
 extern crate sha2;
 
 use actix_web::{error::BlockingError, web, HttpResponse};
+use cita_tool::{
+    client::basic::{Client, ClientExt},
+    crypto::Encryption,
+    PrivateKey, TransactionOptions, UnverifiedTransaction,
+};
+use cita_types::U256;
 use diesel::prelude::*;
 use diesel::PgConnection;
 use futures::Future;
-use hex::{decode, encode};
+use hex::encode;
 use hmac::{Hmac, Mac};
 use serde_json::{from_str, Value};
 use sha2::Sha256;
-use std::process::Command;
 use std::str;
+use std::str::FromStr;
 
 use crate::errors::ServiceError;
 use crate::models::{Pool, User};
@@ -19,6 +27,9 @@ use crate::schema::users::dsl::{email, users};
 use crate::utils::PRIVATE_KEY;
 
 type HmacSha256 = Hmac<Sha256>;
+
+pub const STORE_ADDRESS: &str = "0xffffffffffffffffffffffffffffffffff010000";
+pub const RPC_URL: &str = "http://101.132.38.100:1337";
 
 #[derive(Debug, Deserialize)]
 pub struct UploadData {
@@ -93,21 +104,26 @@ pub fn query_diesel(
             if matching {
                 let msg_hex_str = encode(msg);
                 let mut msg_hex_string = String::from("0x");
-                msg_hex_string += &msg_hex_str;
+                msg_hex_string += &msg_hex_str; //code
 
-                let store_tx_command = Command::new("cita-cli")
-                    .args(&["store", "data", "--content"])
-                    .arg(&msg_hex_string)
-                    .arg("--private-key")
-                    .arg(PRIVATE_KEY.as_str())
-                    .args(&["--url", "http://101.132.38.100:1337"])
-                    .output()
-                    .expect("failed to construct store trasaction");
+                let encryption = Encryption::Secp256k1;
+                let priv_key: PrivateKey = PrivateKey::from_str(PRIVATE_KEY.as_str(), encryption)
+                    .unwrap()
+                    .into();
 
-                let command_out = store_tx_command.stdout;
-                let tx_out = str::from_utf8(&command_out).unwrap();
-                let tx_obj: Value = from_str(tx_out).expect("json was not well-formatted");
-                let mut tx_hash = tx_obj["result"]["hash"].to_string();
+                let tx_options = TransactionOptions::new()
+                    .set_code(&msg_hex_string)
+                    .set_address(STORE_ADDRESS)
+                    .set_value(Some(U256::from_str("0").unwrap()));
+                let client = Client::new();
+                let mut client = client.set_uri(RPC_URL);
+                let client = client.set_private_key(&priv_key);
+
+                let rpc_response = client.send_raw_transaction(tx_options).unwrap();
+                let response_value = rpc_response.result().unwrap().to_string();
+                let tx_obj: Value = from_str(&response_value).expect("json was not well-formatted");
+                let mut tx_hash = tx_obj["hash"].to_string();
+
                 let tx_hash_len = tx_hash.len();
                 tx_hash.remove(0);
                 tx_hash.remove(tx_hash_len - 2);
@@ -138,8 +154,7 @@ fn verify_sig(key: &str, msg: &str, sig: &str) -> Result<bool, ServiceError> {
 
     if sig_get != sig {
         println!(
-            " input sig: {:?}\n new sig: {:?}\n key: {:?}\n msg: {:?}",
-            sig, sig_get, key, msg
+            "Failed to vertify the hmac signature.\n",
         );
         Err(ServiceError::Unauthorized)
     } else {
@@ -179,42 +194,28 @@ pub fn query_chain(
             if matching {
                 let txid = query_data.txid;
                 // cita-cli rpc getTransaction --hash 0x6ca4004ec71b3a1e83fb566b7a8d7f992c86e3df1d41748da924a595f17e8312 --url http://101.132.38.100:1337
-                let store_tx_command = Command::new("cita-cli")
-                    .args(&["rpc", "getTransaction", "--hash"])
-                    .arg(&txid)
-                    .args(&["--url", "http://101.132.38.100:1337"])
-                    .output()
-                    .expect("failed to construct store trasaction");
 
-                let command_out = store_tx_command.stdout;
-                let tx_out = str::from_utf8(&command_out).unwrap();
-                let tx_obj: Value = from_str(tx_out).expect("json was not well-formatted");
-                let mut tx_content = tx_obj["result"]["content"].to_string();
+                let client = Client::new();
+                let client = client.set_uri(RPC_URL);
+                let rpc_response = client.get_transaction(&txid).unwrap();
+                let response_value = rpc_response.result().unwrap().to_string();
+
+                let tx_obj: Value = from_str(&response_value).expect("json was not well-formatted");
+                let mut tx_content = tx_obj["content"].to_string();
+
                 let content_len = tx_content.len();
                 tx_content.remove(0);
                 tx_content.remove(content_len - 2);
-                println!("content: {:?}\n", tx_content);
 
-                let decode_content_command = Command::new("cita-cli")
-                    .args(&["tx", "decode-unverifiedTransaction", "--content"])
-                    .arg(&tx_content)
-                    .output()
-                    .expect("failed to decode content data");
+                let tx = UnverifiedTransaction::from_str(&tx_content).unwrap();
+                let tx = match tx.transaction.as_ref() {
+                    Some(tx) => tx,
+                    None => return Err(ServiceError::Unauthorized),
+                };
+                let mut tx_content = str::from_utf8(&tx.data).unwrap().to_string();
+                let offset = tx_content.find('&').unwrap_or(tx_content.len());
 
-                let command_out = decode_content_command.stdout;
-                let tx_out = str::from_utf8(&command_out).unwrap();
-                let tx_obj: Value = from_str(tx_out).expect("json was not well-formatted");
-                let mut tx_content = tx_obj["transaction"]["data"].to_string();
-                let content_len = tx_content.len();
-                tx_content.remove(0);
-                tx_content.remove(content_len - 2);
-                tx_content.remove(0);
-                tx_content.remove(0);
-                let text_vec = decode(tx_content.as_str()).unwrap();
-                let mut text = str::from_utf8(&text_vec).unwrap().to_string();
-                let offset = text.find('&').unwrap_or(text.len());
-                let text: String = text.drain(9..offset).collect();
-
+                let text: String = tx_content.drain(9..offset).collect();
                 let data_obj = EvidenceObj { evidence: text };
                 let res: QueryReturnData = QueryReturnData {
                     rescode: 1,

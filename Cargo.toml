@@ -27,3 +27,5 @@ hmac = "0.7.1"
 sha2 = "0.8.1"
 hex = "0.4.2"
 ethsign = { version = "0.7.3", path = "./ethsign" }
+cita-tool = { git = "https://github.com/citahub/cita-cli" }
+cita-types = { git = "https://github.com/flyq/cita-common", branch = "develop" }
