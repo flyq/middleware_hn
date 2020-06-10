@@ -32,6 +32,21 @@ pub const STORE_ADDRESS: &str = "0xffffffffffffffffffffffffffffffffff010000";
 pub const RPC_URL: &str = "http://101.132.38.100:1337";
 
 #[derive(Debug, Deserialize)]
+pub struct TransferData {
+    pub email: String,
+    pub evidence: String,
+    pub timestamp: i64,
+    pub signature: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransferReturnData {
+    pub rescode: i64,
+    pub resmsg: String,
+    pub data: TxObj,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct UploadData {
     pub email: String,
     pub evidence: String,
@@ -69,6 +84,93 @@ pub struct QueryData {
     pub txid: String,
     pub timestamp: i64,
     pub signature: String,
+}
+
+// add new funtion: send a transaction for 1 TDT
+pub fn transfer_one(
+    transfer_data: web::Json<TransferData>,
+    pool: web::Data<Pool>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    web::block(move || query_transfer(transfer_data.into_inner(), pool)).then(
+        move |res: Result<TransferReturnData, BlockingError<ServiceError>>| match res {
+            Ok(transfer_return_data) => Ok(HttpResponse::Ok().json(&transfer_return_data)),
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            }
+        }
+    )
+}
+
+pub fn query_transfer(
+    transfer_data: TransferData,
+    pool: web::Data<Pool>,
+) -> Result<UploadReturnData, ServiceError> {
+    let conn: &PgConnection = &pool.get().unwrap();
+    let mut items = users
+        .filter(email.eq(&transfer_data.email))
+        .load::<User>(conn)?;
+
+
+    if let Some(user) = items.pop() {
+        // useless
+        let mut msg: String = String::from("");
+
+        // what does the normal transaction msg looks like
+        if let Ok(matching) = verify_sig(&user.hash, &msg, &transfer_data.signature) {
+            if matching {
+                // encode the msg to hex
+                let msg_hex_str = encode(msg);
+                // and "0x" to the head of hex_msg
+                let mut msg_hex_string = String::from("0x");
+                msg_hex_string += &msg_hex_str; //code
+
+                // configure the encryption method
+                let encryption = Encryption::Secp256k1;
+                // get private key
+                let priv_key: PrivateKey = PrivateKey::from_str(PRIVATE_KEY.as_str(), encryption)
+                    .unwrap()
+                    .into();
+
+                // transaction configuration
+                let tx_options = TransactionOptions::new()
+                    .set_code(&msg_hex_string) // msg
+                    .set_address(STORE_ADDRESS) // address
+                    .set_value(Some(U256::from_str("1000000000000000000000").unwrap())); // transfer amount
+                // the client object for send transaction
+                let client = Client::new();
+                // rpc address
+                let mut client = client.set_uri(RPC_URL);
+                // configure private key
+                let client = client.set_private_key(&priv_key);
+                
+                // cita-cli
+                // rpc return
+                let rpc_response = client.send_raw_transaction(tx_options).unwrap();
+
+                // more specific
+                let response_value = rpc_response.result().unwrap().to_string();
+
+                // Value is a enum type, at this place, it's a Object<Map>
+                let tx_obj: Value = from_str(&response_value).expect("json was not well-formatted");
+                let mut tx_hash = tx_obj["hash"].to_string();
+
+                let tx_hash_len = tx_hash.len();
+                tx_hash.remove(0);
+                tx_hash.remove(tx_hash_len - 2);
+
+                let data_obj = TxObj { txid: tx_hash };
+                let res = UploadReturnData {
+                    rescode: 1,
+                    resmsg: "Success".to_string(),
+                    data: data_obj,
+                };
+
+                return Ok(res);
+            }
+        }
+    }
+    Err(ServiceError::Unauthorized)
 }
 
 pub fn upload(
