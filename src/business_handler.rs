@@ -97,20 +97,19 @@ pub fn transfer_one(
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            }
-        }
+            },
+        },
     )
 }
 
 pub fn query_transfer(
     transfer_data: TransferData,
     pool: web::Data<Pool>,
-) -> Result<UploadReturnData, ServiceError> {
+) -> Result<TransferReturnData, ServiceError> {
     let conn: &PgConnection = &pool.get().unwrap();
     let mut items = users
         .filter(email.eq(&transfer_data.email))
         .load::<User>(conn)?;
-
 
     if let Some(user) = items.pop() {
         // useless
@@ -160,7 +159,7 @@ pub fn query_transfer(
                 tx_hash.remove(tx_hash_len - 2);
 
                 let data_obj = TxObj { txid: tx_hash };
-                let res = UploadReturnData {
+                let res = TransferReturnData {
                     rescode: 1,
                     resmsg: "Success".to_string(),
                     data: data_obj,
