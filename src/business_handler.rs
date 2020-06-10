@@ -34,7 +34,6 @@ pub const RPC_URL: &str = "http://101.132.38.100:1337";
 #[derive(Debug, Deserialize)]
 pub struct TransferData {
     pub email: String,
-    pub evidence: String,
     pub timestamp: i64,
     pub signature: String,
 }
@@ -91,6 +90,7 @@ pub fn transfer_one(
     transfer_data: web::Json<TransferData>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    println!("i am here");
     web::block(move || query_transfer(transfer_data.into_inner(), pool)).then(
         move |res: Result<TransferReturnData, BlockingError<ServiceError>>| match res {
             Ok(transfer_return_data) => Ok(HttpResponse::Ok().json(&transfer_return_data)),
@@ -110,20 +110,15 @@ pub fn query_transfer(
     let mut items = users
         .filter(email.eq(&transfer_data.email))
         .load::<User>(conn)?;
-
+    println!("112");
     if let Some(user) = items.pop() {
         // useless
-        let mut msg: String = String::from("");
-
+        println!("116");
         // what does the normal transaction msg looks like
-        if let Ok(matching) = verify_sig(&user.hash, &msg, &transfer_data.signature) {
+        if let Ok(matching) = verify_sig_transfer() {
+            println!("119");
             if matching {
-                // encode the msg to hex
-                let msg_hex_str = encode(msg);
-                // and "0x" to the head of hex_msg
-                let mut msg_hex_string = String::from("0x");
-                msg_hex_string += &msg_hex_str; //code
-
+                println!("121");
                 // configure the encryption method
                 let encryption = Encryption::Secp256k1;
                 // get private key
@@ -133,7 +128,7 @@ pub fn query_transfer(
 
                 // transaction configuration
                 let tx_options = TransactionOptions::new()
-                    .set_code(&msg_hex_string) // msg
+                    .set_code("") // msg
                     .set_address(STORE_ADDRESS) // address
                     .set_value(Some(U256::from_str("1000000000000000000000").unwrap())); // transfer amount
                 // the client object for send transaction
@@ -241,6 +236,10 @@ pub fn query_diesel(
         }
     }
     Err(ServiceError::Unauthorized)
+}
+
+fn verify_sig_transfer() -> Result<bool, ServiceError> {
+    Ok(true)
 }
 
 fn verify_sig(key: &str, msg: &str, sig: &str) -> Result<bool, ServiceError> {

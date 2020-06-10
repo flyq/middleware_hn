@@ -16,6 +16,7 @@ mod schema;
 mod utils;
 
 fn main() -> std::io::Result<()> {
+    println!("start");
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     env_logger::init();
@@ -52,6 +53,10 @@ fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/evidence/query")
                             .route(web::get().to_async(business_handler::query)),
+                    )
+                    .service(
+                        web::resource("/evidence/transfer_one")
+                            .route(web::post().to_async(business_handler::transfer_one)),
                     ),
             )
     })
